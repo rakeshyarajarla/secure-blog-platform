@@ -12,6 +12,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { BullModule } from '@nestjs/bullmq';
 import { JobModule } from './job/job.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -31,11 +32,15 @@ import { JobModule } from './job/job.module';
         limit: 100, // 100 requests per minute
       },
     ]),
-    BullModule.forRoot({
-      connection: {
-        host: 'localhost',
-        port: 6379,
-      },
+   ConfigModule.forRoot({ isGlobal: true }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        connection: configService.get('REDIS_URL')
+          ? { url: configService.get('REDIS_URL') }
+          : { host: 'localhost', port: 6379 },
+      }),
+      inject: [ConfigService],
     }),
     PrismaModule,
     UserModule,
